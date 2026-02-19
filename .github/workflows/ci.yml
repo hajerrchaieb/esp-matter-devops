@@ -1,4 +1,4 @@
-name: Test Light Example
+name: ESP32 Matter CI
 
 on:
   push:
@@ -10,45 +10,76 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout repo
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    # 2️⃣ Install system dependencies
-    - name: Install dependencies
+    - name: Update system and install dependencies
       run: |
-        sudo apt update
+        sudo apt update && sudo apt upgrade -y
         sudo apt install -y git wget curl build-essential cmake ninja-build \
         python3 python3-pip python3-venv unzip libffi-dev libssl-dev
 
-    # 3️⃣ Clone ESP-IDF
-    - name: Setup ESP-IDF
+    - name: Clone and setup ESP-IDF
       run: |
-        git clone --recursive https://github.com/espressif/esp-idf.git
+        cd ~
+        git clone https://github.com/espressif/esp-idf.git
         cd esp-idf
         git checkout v5.4.1
-        git submodule update --init --recursive
+        
+        git clean -ffd
+        git submodule update --init --depth 1
+        
+        find . -type d -name '.git' ! -path './.git/*' | while read gitdir; do
+          gitparent=$(dirname "$gitdir")
+          cd "$gitparent" && git clean -ffd && cd - > /dev/null
+        done
+        
+        git submodule foreach --recursive git clean -ffd
+        git submodule update --init --depth 1 --recursive
+        
         ./install.sh
-        echo "IDF_PATH=$PWD" >> $GITHUB_ENV
-        echo "$PWD/tools:$PWD/components/esptool_py/esptool:$PATH" >> $GITHUB_PATH
+        export IDF_CCACHE_ENABLE=1
+        echo "IDF_PATH=$HOME/esp-idf" >> $GITHUB_ENV
+        echo "IDF_CCACHE_ENABLE=1" >> $GITHUB_ENV
 
-    # 4️⃣ Clone ESP-Matter
-    - name: Clone ESP-Matter
-      run: git clone --recursive https://github.com/espressif/esp-matter.git
-
-    # 5️⃣ Build Light Example
-    - name: Build Light Example
-      shell: bash
+    - name: Clone and setup ESP-Matter with GN
       run: |
-        set -e
-        source $IDF_PATH/export.sh
-        cd esp-matter/examples/light
+        cd ~
+        git clone https://github.com/espressif/esp-matter.git
+        cd esp-matter
+        
+        git clean -ffd
+        git submodule update --init --depth 1
+        
+        find . -type d -name '.git' ! -path './.git/*' | while read gitdir; do
+          gitparent=$(dirname "$gitdir")
+          cd "$gitparent" && git clean -ffd && cd - > /dev/null
+        done
+        
+        git submodule foreach --recursive git clean -ffd
+        git submodule update --init --depth 1 --recursive
+        
+        # Install GN and prepare build
+        cd connectedhomeip/connectedhomeip
+        ./scripts/checkout_submodules.py --platform esp32 linux --shallow
+        cd ../..
+        
+        # THIS is essential - prepares everything including GN
+        ./install.sh
+        
+        echo "ESP_MATTER_PATH=$HOME/esp-matter" >> $GITHUB_ENV
+
+    - name: Build firmware for ESP32C3
+      run: |
+        source $HOME/esp-idf/export.sh
+        source $HOME/esp-matter/export.sh
+        cd $HOME/esp-matter/examples/light
         idf.py set-target esp32c3
         idf.py build
 
-    # 6️⃣ Upload firmware
-    - name: Upload firmware
+    - name: Upload firmware artifact
       uses: actions/upload-artifact@v4
       with:
         name: light-firmware
-        path: esp-matter/examples/light/build/*.bin
+        path: ~/esp-matter/examples/light/build/*.bin
 
