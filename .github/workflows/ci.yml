@@ -10,23 +10,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout repo (empty repo just for CI)
+    # 1️⃣ Checkout repo
     - uses: actions/checkout@v4
 
-    # 2️⃣ Install dependencies
+    # 2️⃣ Install system dependencies
     - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y git wget curl build-essential cmake ninja-build \
         python3 python3-pip python3-venv unzip libffi-dev libssl-dev
 
-    # 3️⃣ Clone ESP-IDF (needed for building)
-    - name: Clone ESP-IDF
+    # 3️⃣ Clone ESP-IDF and install Python venv
+    - name: Setup ESP-IDF
       run: |
         git clone --branch v5.4.1 --depth 1 --recursive https://github.com/espressif/esp-idf.git
-        echo "IDF_PATH=$PWD/esp-idf" >> $GITHUB_ENV
+        cd esp-idf
+        ./install.sh python
+        echo "IDF_PATH=$PWD" >> $GITHUB_ENV
 
-    # 4️⃣ Clone only the light example from ESP-Matter
+    # 4️⃣ Clone only the Light example from ESP-Matter
     - name: Clone ESP-Matter Light Example
       run: |
         mkdir -p esp-matter/examples
