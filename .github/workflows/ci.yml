@@ -28,16 +28,12 @@ jobs:
         ./install.sh python
         echo "IDF_PATH=$PWD" >> $GITHUB_ENV
 
-    # 4️⃣ Clone only the Light example from ESP-Matter
-    - name: Clone ESP-Matter Light Example
+    # 4️⃣ Clone full ESP-Matter repo (we only build light example)
+    - name: Clone ESP-Matter
       run: |
-        mkdir -p esp-matter/examples
-        cd esp-matter/examples
-        git clone --depth 1 --filter=blob:none --sparse https://github.com/espressif/esp-matter.git
-        cd esp-matter
-        git sparse-checkout set examples/light
+        git clone --depth 1 https://github.com/espressif/esp-matter.git
 
-    # 5️⃣ Build Light Example
+    # 5️⃣ Build only the Light Example
     - name: Build Light Example
       shell: bash
       run: |
@@ -47,7 +43,7 @@ jobs:
         idf.py set-target esp32c3
         idf.py build
 
-    # 6️⃣ Upload firmware artifact
+    # 6️⃣ Upload firmware
     - name: Upload firmware
       uses: actions/upload-artifact@v4
       with:
