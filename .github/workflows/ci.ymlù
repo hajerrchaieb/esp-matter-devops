@@ -1,0 +1,75 @@
+name: ESP32 Matter Light Example CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-light:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1️⃣ Checkout repo
+    - uses: actions/checkout@v4
+
+    # 2️⃣ Install system dependencies (Added pkg-config and libglib2.0-dev for Matter)
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y git wget curl build-essential cmake ninja-build \
+        python3 python3-pip python3-venv unzip libffi-dev libssl-dev pkg-config libglib2.0-dev
+
+    # 3️⃣ Clone ESP-IDF and install Python venv
+    - name: Setup ESP-IDF
+      run: |
+        git clone --branch v5.4.1 --depth 1 --recursive https://github.com/espressif/esp-idf.git
+        cd esp-idf
+        ./install.sh python
+        echo "IDF_PATH=$GITHUB_WORKSPACE/esp-idf" >> $GITHUB_ENV
+
+    # 4️⃣ Clone full ESP-Matter repo WITH submodules
+    - name: Clone ESP-Matter
+      run: |
+        git clone --depth 1 --recursive https://github.com/espressif/esp-matter.git
+        echo "ESP_MATTER_PATH=$GITHUB_WORKSPACE/esp-matter" >> $GITHUB_ENV
+
+     # 5️⃣ Bootstrap ESP-Matter dependencies
+- name: Bootstrap ESP-Matter
+shell: bash
+run: |
+source $IDF_PATH/export.sh
+cd esp-matter
+./install.sh
+
+# 🥉 Static analysis (DevSecOps)
+- name: Static code analysis (DevSecOps)
+shell: bash
+run: |
+sudo apt update
+sudo apt install -y cppcheck flawfinder
+cd esp-matter/examples/light
+cppcheck --enable=all --error-exitcode=1 .
+flawfinder .
+
+    # 6️⃣ Build Light Example
+    - name: Build Light Example
+      shell: bash
+      run: |
+        set -e
+        # Source both ESP-IDF and ESP-Matter environments
+        source $IDF_PATH/export.sh
+        cd esp-matter
+        source export.sh
+        idf.py build
+
+    # 7️⃣ Upload firmware artifact
+    - name: Upload firmware
+      uses: actions/upload-artifact@v4
+      with:
+        name: light-firmware
+        path: |
+          esp-matter/examples/light/build/*.bin
+          esp-matter/examples/light/build/bootloader/*.bin
+          esp-matter/examples/light/build/partition_table/*.bin
+
