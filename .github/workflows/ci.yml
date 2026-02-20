@@ -13,7 +13,7 @@ jobs:
     # 1️⃣ Checkout repo
     - uses: actions/checkout@v4
 
-    # 2️⃣ Install system dependencies (Added pkg-config and libglib2.0-dev for Matter)
+    # 2️⃣ Install system dependencies
     - name: Install dependencies
       run: |
         sudo apt update
@@ -38,27 +38,30 @@ jobs:
     - name: Bootstrap ESP-Matter
       shell: bash
       run: |
-        # ESP-IDF must be sourced before installing ESP-Matter
         source $IDF_PATH/export.sh
         cd esp-matter
         ./install.sh
-- name: Static code analysis (DevSecOps)
-  run: |
-    sudo apt install -y cppcheck flawfinder
-    cd esp-matter/examples/light
-    cppcheck --enable=all --error-exitcode=1 .
-    flawfinder .
 
+    # 🥉 Static analysis (DevSecOps)
+    - name: Static code analysis (DevSecOps)
+      shell: bash
+      run: |
+        sudo apt update
+        sudo apt install -y cppcheck flawfinder
+        cd esp-matter/examples/light
+        cppcheck --enable=all --error-exitcode=1 .
+        flawfinder .
 
     # 6️⃣ Build Light Example
     - name: Build Light Example
       shell: bash
       run: |
         set -e
-        # Source both ESP-IDF and ESP-Matter environments
         source $IDF_PATH/export.sh
         cd esp-matter
         source export.sh
+        cd examples/light
+        idf.py set-target esp32c3
         idf.py build
 
     # 7️⃣ Upload firmware artifact
