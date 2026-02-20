@@ -56,12 +56,12 @@ jobs:
         # Navigate to example and build
         cd examples/light
         idf.py set-target esp32c3
-    - name: Static code analysis
-      run: |
-        sudo apt update
-        sudo apt install -y cppcheck flawfinder
-        cppcheck --enable=all --error-exitcode=1
-        flawfinder 
+    - name: Static code analysis (DevSecOps)
+  run: |
+    sudo apt install -y cppcheck flawfinder
+    cd esp-matter/examples/light
+    cppcheck --enable=all --error-exitcode=1 
+    flawfinder 
 
         idf.py build
 
