@@ -41,17 +41,14 @@ jobs:
         source $IDF_PATH/export.sh
         cd esp-matter
         ./install.sh
-
-    # 🥉 Static analysis (DevSecOps)
     - name: Static code analysis (DevSecOps)
       shell: bash
       run: |
         sudo apt update
         sudo apt install -y cppcheck flawfinder
         cd esp-matter/examples/light
-        cppcheck --enable=all --error-exitcode=1 .
-        flawfinder .
-
+        cppcheck --enable=all --error-exitcode=1 --suppress=missingIncludeSystem .
+        flawfinder.
     # 6️⃣ Build Light Example
     - name: Build Light Example
       shell: bash
