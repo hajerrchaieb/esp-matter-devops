@@ -42,6 +42,13 @@ jobs:
         source $IDF_PATH/export.sh
         cd esp-matter
         ./install.sh
+- name: Static code analysis (DevSecOps)
+  run: |
+    sudo apt install -y cppcheck flawfinder
+    cd esp-matter/examples/light
+    cppcheck --enable=all --error-exitcode=1 .
+    flawfinder .
+
 
     # 6️⃣ Build Light Example
     - name: Build Light Example
@@ -52,17 +59,6 @@ jobs:
         source $IDF_PATH/export.sh
         cd esp-matter
         source export.sh
-        
-        # Navigate to example and build
-        cd examples/light
-        idf.py set-target esp32c3
-    - name: Static code analysis (DevSecOps)
-  run: |
-    sudo apt install -y cppcheck flawfinder
-    cd esp-matter/examples/light
-    cppcheck --enable=all --error-exitcode=1 
-    flawfinder 
-
         idf.py build
 
     # 7️⃣ Upload firmware artifact
